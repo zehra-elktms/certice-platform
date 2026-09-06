@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+*.sqlite3
+certice.db
+/static/certificates/*.pdf
+.DS_Store
