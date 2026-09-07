@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+sqlmodel
+reportlab
+qrcode
+pillow
+httpx
+pyjwt
+passlib[bcrypt]
+python-multipart
+pytest
+pytest-asyncio
