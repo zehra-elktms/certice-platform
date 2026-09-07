@@ -117,7 +117,6 @@ def issue_certificate(req: CertificateCreateRequest, session: Session = Depends(
     payload_string = f"{cert_uuid}:{product.id}:{product.serial_number}:{req.directive_code}"
     payload_hash = hashlib.sha256(payload_string.encode()).hexdigest()
     
-    # Blockchain Mining
     last_block = session.exec(select(BlockchainBlock).order_by(BlockchainBlock.block_index.desc())).first()
     prev_hash = last_block.block_hash if last_block else "0000000000000000000000000000000000000000000000000000000000000000"
     new_block_index = (last_block.block_index + 1) if last_block else 1
@@ -140,7 +139,6 @@ def issue_certificate(req: CertificateCreateRequest, session: Session = Depends(
     )
     session.add(block)
     
-    # Generate PDF
     pdf_filename = f"static/certificates/CE_Cert_{cert_uuid}.pdf"
     PDFGenerator.generate_ce_certificate(
         cert_uuid=cert_uuid,
@@ -206,10 +204,28 @@ def verify_certificate(certificate_uuid: str, session: Session = Depends(get_ses
         block_index=cert.block_index,
         blockchain_tx_hash=cert.blockchain_tx_hash,
         created_at=str(cert.created_at),
-        message="✅ Certificate authenticity verified on Blockchain Ledger." if blockchain_ok else "⚠️ Certificate payload mismatch detected!"
+        message="✅ Certificate authenticity verified on Blockchain Ledger." if blockchain_ok else "⚠️ SECURITY ALERT: Payload hash mismatch! This certificate or technical dossier has been ILLEGALLY TAMPERED WITH!"
     )
 
-# --- 7. EXTERNAL API INTEGRATIONS ---
+# --- 7. TAMPER SIMULATOR (SECURITY TEST ENDPOINT) ---
+@router.post("/simulate-tamper/{certificate_uuid}")
+def simulate_tamper(certificate_uuid: str, session: Session = Depends(get_session)):
+    cert = session.exec(select(Certificate).where(Certificate.uuid == certificate_uuid)).first()
+    if not cert:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    
+    # Tamper the hash in Database
+    cert.payload_hash = "HACKED_FAKE_HASH_" + cert.payload_hash[:20]
+    session.add(cert)
+    session.commit()
+    session.refresh(cert)
+    return {
+        "certificate_uuid": certificate_uuid,
+        "tampered_hash": cert.payload_hash,
+        "message": "ATTACK SIMULATED: Certificate payload hash in SQL DB has been corrupted! Test verification now."
+    }
+
+# --- 8. EXTERNAL API INTEGRATIONS ---
 @router.get("/external/rates")
 async def get_currency_rates():
     return await ExternalAPIService.fetch_currency_rates()

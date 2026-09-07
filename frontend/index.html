@@ -20,7 +20,6 @@
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif; }
         body { background-color: var(--bg-dark); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
 
-        /* Animated Background Gradients */
         .bg-glow {
             position: fixed; top: -10%; left: 50%; transform: translateX(-50%);
             width: 800px; height: 400px;
@@ -44,7 +43,6 @@
 
         .container { max-width: 1200px; margin: 2.5rem auto; padding: 0 1.5rem; position: relative; z-index: 10; }
 
-        /* Grid Layout */
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
 
         .card {
@@ -74,7 +72,6 @@
         }
         .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--primary-glow); }
 
-        /* Blockchain Verification Status Card */
         .verification-box {
             padding: 1.5rem; border-radius: 12px; background: rgba(15, 23, 42, 0.8);
             border: 1px dashed rgba(59, 130, 246, 0.3); margin-top: 1.5rem;
@@ -87,7 +84,6 @@
 
         .hash-code { font-family: monospace; font-size: 0.8rem; color: #3b82f6; word-break: break-all; margin-top: 0.5rem; }
 
-        /* Currency Ticker */
         .ticker { display: flex; gap: 1.5rem; font-size: 0.85rem; color: var(--text-muted); background: rgba(255,255,255,0.03); padding: 0.5rem 1rem; border-radius: 20px; }
         .ticker span { color: #fff; font-weight: 600; }
     </style>
@@ -170,9 +166,14 @@
                 <div class="form-group">
                     <input type="text" id="verifyUuidInput" class="form-input" placeholder="Sertifika UUID Girin veya Paste Edin...">
                 </div>
-                <button onclick="verifyCertificate()" class="btn" style="background: linear-gradient(135deg, #10b981, #059669);">
-                    🔍 Blockchain Üzerinden Doğrula
-                </button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <button onclick="verifyCertificate()" class="btn" style="background: linear-gradient(135deg, #10b981, #059669);">
+                        🔍 Blockchain Üzerinden Doğrula
+                    </button>
+                    <button onclick="simulateTamper()" class="btn" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                        ⚠️ Sahtecilik Simüle Et (Tamper Test)
+                    </button>
+                </div>
                 <div id="verifyResult"></div>
             </div>
         </div>
@@ -181,7 +182,6 @@
     <script>
         const API_URL = "http://127.0.0.1:8000/api/v1";
 
-        // Fetch Live Currency Rates via External API
         async function fetchRates() {
             try {
                 const res = await fetch(`${API_URL}/external/rates`);
@@ -194,14 +194,12 @@
         }
         fetchRates();
 
-        // Form Submit
         document.getElementById('certForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const output = document.getElementById('outputArea');
             output.innerHTML = "<p style='color:#3b82f6;'>⚙️ ISO 12100 Risk Analizi yapılıyor ve Blockchain Bloğu kazılıyor...</p>";
 
             try {
-                // 1. Create Product
                 const prodRes = await fetch(`${API_URL}/products`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -215,7 +213,6 @@
                 });
                 const prod = await prodRes.json();
 
-                // 2. Calculate Risk
                 await fetch(`${API_URL}/risk/calculate`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -230,7 +227,6 @@
                     })
                 });
 
-                // 3. Issue Certificate & Mine Block
                 const certRes = await fetch(`${API_URL}/certificates/issue`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -263,7 +259,6 @@
             }
         });
 
-        // Verify Certificate
         async function verifyCertificate() {
             const uuid = document.getElementById('verifyUuidInput').value.trim();
             const resDiv = document.getElementById('verifyResult');
@@ -286,14 +281,28 @@
                     `;
                 } else {
                     resDiv.innerHTML = `
-                        <div class="verification-box" style="border-color:#ef4444; background:rgba(239,68,68,0.1); margin-top:1rem;">
+                        <div class="verification-box" style="border-color:#ef4444; background:rgba(239,68,68,0.2); margin-top:1rem;">
                             <span class="status-badge" style="background:#ef4444; color:#fff;">⚠️ SAHTE VEYA MANİPÜLE EDİLMİŞ SERTİFİKA</span>
-                            <p style="margin-top:0.5rem; font-size:0.9rem; color:#ef4444;">${data.message}</p>
+                            <p style="margin-top:0.5rem; font-size:0.9rem; color:#f87171; font-weight:bold;">${data.message}</p>
+                            <p style="font-size:0.8rem; color:#cbd5e1; margin-top:0.5rem;">Blockchain üzerindeki orijinal SHA-256 hash ile veritabanındaki hash eşleşmiyor!</p>
                         </div>
                     `;
                 }
             } catch(e) {
                 resDiv.innerHTML = `<p style="color:#ef4444; margin-top:1rem;">Doğrulama hatası</p>`;
+            }
+        }
+
+        async function simulateTamper() {
+            const uuid = document.getElementById('verifyUuidInput').value.trim();
+            if(!uuid) return alert("Lütfen önce bir sertifika oluşturun veya UUID girin");
+
+            try {
+                await fetch(`${API_URL}/simulate-tamper/${uuid}`, { method: 'POST' });
+                alert("⚠️ SİBER SALDIRI SİMÜLE EDİLDİ: Veritabanındaki hash sahtelendi! Şimdi 'Blockchain Üzerinden Doğrula' butonuna basarak tespiti görün.");
+                verifyCertificate();
+            } catch(e) {
+                alert("Simülasyon hatası");
             }
         }
     </script>
